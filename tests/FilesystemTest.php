@@ -372,4 +372,294 @@ class FilesystemTest extends TestCase
         $this->assertDirectoryExists($this->testRoot . '/deep/nested/path');
     }
 
+    public function test_copyOut_copies_file_from_filesystem_to_outside(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+        file_put_contents($this->testRoot . '/source.txt', 'test content');
+        $outside = sys_get_temp_dir() . '/outside-' . uniqid() . '.txt';
+
+        try {
+            $fs->copyOut('source.txt', $outside, false);
+
+            $this->assertFileExists($outside);
+            $this->assertEquals('test content', file_get_contents($outside));
+            $this->assertFileExists($this->testRoot . '/source.txt'); // Source still exists
+        }
+        finally {
+            if (file_exists($outside))
+                unlink($outside);
+        }
+    }
+
+    public function test_copyOut_works_with_file_objects(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+        file_put_contents($this->testRoot . '/source.txt', 'test content');
+        $outside = sys_get_temp_dir() . '/outside-' . uniqid() . '.txt';
+
+        try {
+            $file = $fs->file('source.txt');
+            $fs->copyOut($file, $outside, false);
+
+            $this->assertFileExists($outside);
+            $this->assertEquals('test content', file_get_contents($outside));
+        }
+        finally {
+            if (file_exists($outside))
+                unlink($outside);
+        }
+    }
+
+    public function test_copyOut_creates_parent_directories(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+        file_put_contents($this->testRoot . '/source.txt', 'test');
+        $outside = sys_get_temp_dir() . '/deep-' . uniqid() . '/nested/file.txt';
+
+        try {
+            $fs->copyOut('source.txt', $outside, false);
+
+            $this->assertFileExists($outside);
+        }
+        finally {
+            if (file_exists($outside)) {
+                unlink($outside);
+                rmdir(dirname($outside));
+                rmdir(dirname(dirname($outside)));
+            }
+        }
+    }
+
+    public function test_copyOut_throws_when_source_does_not_exist(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+        $outside = sys_get_temp_dir() . '/outside-' . uniqid() . '.txt';
+
+        $this->expectException(FilesystemException::class);
+        $fs->copyOut('nonexistent.txt', $outside, false);
+    }
+
+    public function test_copyOut_throws_when_destination_exists_and_no_overwrite(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+        file_put_contents($this->testRoot . '/source.txt', 'source');
+        $outside = sys_get_temp_dir() . '/outside-' . uniqid() . '.txt';
+        file_put_contents($outside, 'existing');
+
+        try {
+            $this->expectException(FilesystemException::class);
+            $fs->copyOut('source.txt', $outside, false);
+        }
+        finally {
+            if (file_exists($outside))
+                unlink($outside);
+        }
+    }
+
+    public function test_copyOut_overwrites_when_allowed(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+        file_put_contents($this->testRoot . '/source.txt', 'new content');
+        $outside = sys_get_temp_dir() . '/outside-' . uniqid() . '.txt';
+        file_put_contents($outside, 'old content');
+
+        try {
+            $fs->copyOut('source.txt', $outside, true);
+
+            $this->assertEquals('new content', file_get_contents($outside));
+        }
+        finally {
+            if (file_exists($outside))
+                unlink($outside);
+        }
+    }
+
+    public function test_copyOut_throws_on_source_traversal(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+        $outside = sys_get_temp_dir() . '/outside-' . uniqid() . '.txt';
+
+        $this->expectException(FilesystemSecurityException::class);
+        $fs->copyOut('../../outside.txt', $outside, false);
+    }
+
+    public function test_moveOut_moves_file_from_filesystem_to_outside(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+        file_put_contents($this->testRoot . '/source.txt', 'test content');
+        $outside = sys_get_temp_dir() . '/outside-' . uniqid() . '.txt';
+
+        try {
+            $fs->moveOut('source.txt', $outside, false);
+
+            $this->assertFileExists($outside);
+            $this->assertEquals('test content', file_get_contents($outside));
+            $this->assertFileDoesNotExist($this->testRoot . '/source.txt');
+        }
+        finally {
+            if (file_exists($outside))
+                unlink($outside);
+        }
+    }
+
+    public function test_moveOut_creates_parent_directories(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+        file_put_contents($this->testRoot . '/source.txt', 'test');
+        $outside = sys_get_temp_dir() . '/deep-' . uniqid() . '/nested/file.txt';
+
+        try {
+            $fs->moveOut('source.txt', $outside, false);
+
+            $this->assertFileExists($outside);
+            $this->assertFileDoesNotExist($this->testRoot . '/source.txt');
+        }
+        finally {
+            if (file_exists($outside)) {
+                unlink($outside);
+                rmdir(dirname($outside));
+                rmdir(dirname(dirname($outside)));
+            }
+        }
+    }
+
+    public function test_copyIn_copies_file_from_outside_to_filesystem(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+        $outside = sys_get_temp_dir() . '/outside-' . uniqid() . '.txt';
+        file_put_contents($outside, 'test content');
+
+        try {
+            $fs->copyIn($outside, 'dest.txt', false);
+
+            $this->assertFileExists($this->testRoot . '/dest.txt');
+            $this->assertEquals('test content', file_get_contents($this->testRoot . '/dest.txt'));
+            $this->assertFileExists($outside); // Source still exists
+        }
+        finally {
+            if (file_exists($outside))
+                unlink($outside);
+        }
+    }
+
+    public function test_copyIn_works_with_file_objects(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+        $outside = sys_get_temp_dir() . '/outside-' . uniqid() . '.txt';
+        file_put_contents($outside, 'test content');
+
+        try {
+            $dest = $fs->file('dest.txt', create: true);
+            $fs->copyIn($outside, $dest, false);
+
+            $this->assertFileExists($this->testRoot . '/dest.txt');
+            $this->assertEquals('test content', file_get_contents($this->testRoot . '/dest.txt'));
+        }
+        finally {
+            if (file_exists($outside))
+                unlink($outside);
+        }
+    }
+
+    public function test_copyIn_creates_parent_directories(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+        $outside = sys_get_temp_dir() . '/outside-' . uniqid() . '.txt';
+        file_put_contents($outside, 'test');
+
+        try {
+            $fs->copyIn($outside, 'deep/nested/dest.txt', false);
+
+            $this->assertFileExists($this->testRoot . '/deep/nested/dest.txt');
+        }
+        finally {
+            if (file_exists($outside))
+                unlink($outside);
+        }
+    }
+
+    public function test_copyIn_throws_when_source_does_not_exist(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+
+        $this->expectException(FilesystemException::class);
+        $fs->copyIn('/nonexistent/file.txt', 'dest.txt', false);
+    }
+
+    public function test_copyIn_throws_when_destination_exists_and_no_overwrite(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+        $outside = sys_get_temp_dir() . '/outside-' . uniqid() . '.txt';
+        file_put_contents($outside, 'source');
+        file_put_contents($this->testRoot . '/dest.txt', 'existing');
+
+        try {
+            $this->expectException(FilesystemException::class);
+            $fs->copyIn($outside, 'dest.txt', false);
+        }
+        finally {
+            if (file_exists($outside))
+                unlink($outside);
+        }
+    }
+
+    public function test_copyIn_overwrites_when_allowed(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+        $outside = sys_get_temp_dir() . '/outside-' . uniqid() . '.txt';
+        file_put_contents($outside, 'new content');
+        file_put_contents($this->testRoot . '/dest.txt', 'old content');
+
+        try {
+            $fs->copyIn($outside, 'dest.txt', true);
+
+            $this->assertEquals('new content', file_get_contents($this->testRoot . '/dest.txt'));
+        }
+        finally {
+            if (file_exists($outside))
+                unlink($outside);
+        }
+    }
+
+    public function test_copyIn_throws_on_destination_traversal(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+        $outside = sys_get_temp_dir() . '/outside-' . uniqid() . '.txt';
+        file_put_contents($outside, 'test');
+
+        try {
+            $this->expectException(FilesystemSecurityException::class);
+            $fs->copyIn($outside, '../../escape.txt', false);
+        }
+        finally {
+            if (file_exists($outside))
+                unlink($outside);
+        }
+    }
+
+    public function test_moveIn_moves_file_from_outside_to_filesystem(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+        $outside = sys_get_temp_dir() . '/outside-' . uniqid() . '.txt';
+        file_put_contents($outside, 'test content');
+
+        $fs->moveIn($outside, 'dest.txt', false);
+
+        $this->assertFileExists($this->testRoot . '/dest.txt');
+        $this->assertEquals('test content', file_get_contents($this->testRoot . '/dest.txt'));
+        $this->assertFileDoesNotExist($outside);
+    }
+
+    public function test_moveIn_creates_parent_directories(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+        $outside = sys_get_temp_dir() . '/outside-' . uniqid() . '.txt';
+        file_put_contents($outside, 'test');
+
+        $fs->moveIn($outside, 'deep/nested/dest.txt', false);
+
+        $this->assertFileExists($this->testRoot . '/deep/nested/dest.txt');
+        $this->assertFileDoesNotExist($outside);
+    }
+
 }

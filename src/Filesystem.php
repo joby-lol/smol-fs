@@ -10,7 +10,7 @@
 namespace Joby\Smol\Filesystem;
 
 /**
- * Representation of the filesystem root, with utility methods for working with it. Will throw a FilesystemSecurityException upon detecting a traversal above the given root directory.
+ * Representation of the filesystem root, with utility methods for working with it. Will throw a FilesystemSecurityException upon detecting a traversal above this Filesystem's root directory.
  */
 class Filesystem
 {
@@ -23,9 +23,9 @@ class Filesystem
     {
         $root = realpath($root);
         if ($root === false)
-            throw new FilesystemException("The given root directory does not exist: {$root}");
+            throw new FilesystemException("this Filesystem's root directory does not exist: {$root}");
         if (!is_dir($root))
-            throw new FilesystemException("The given root path is not a directory: {$root}");
+            throw new FilesystemException("this Filesystem's root path is not a directory: {$root}");
         // normalize to forward slashes, even on Windows
         $this->root = str_replace('\\', '/', $root) . '/';
     }
@@ -34,7 +34,7 @@ class Filesystem
      * Copy a file from source to destination. If $allow_overwrite is false and the destination file exists, an exception will be thrown. Accepts File objects and both relative and absolute paths, but will throw an exception if any of the provided paths are outside this Filesystem's root.
      * 
      * @throws FilesystemException if a directory exists at the given target location
-     * @throws FilesystemSecurityException if any paths resolve to outside the given root
+     * @throws FilesystemSecurityException if any paths resolve to outside this Filesystem's root
      */
     public function copy(string|File $source, string|File $destination, bool $allow_overwrite): void
     {
@@ -52,13 +52,89 @@ class Filesystem
      * Move a file from source to destination. If $allow_overwrite is false and the destination file exists, an exception will be thrown. Accepts File objects and both relative and absolute paths, but will throw an exception if any of the provided paths are outside this Filesystem's root.
      * 
      * @throws FilesystemException if a directory exists at the given target location
-     * @throws FilesystemSecurityException if any paths resolve to outside the given root
+     * @throws FilesystemSecurityException if any paths resolve to outside this Filesystem's root
      */
     public function move(string|File $source, string|File $destination, bool $allow_overwrite): void
     {
         $this->copy($source, $destination, $allow_overwrite);
         $source = $this->root . PathNormalizer::normalize((string) $source, $this->root);
         unlink($source);
+    }
+
+    /**
+     * Copy a file from a source inside this Filesystem to a destination anywhere else. Accepts File objects and both relative and absolute paths, but will throw an exception if the source path is outside this Filesystem's root.
+     * 
+     * @throws FilesystemException if a directory exists at the given target location
+     * @throws FilesystemSecurityException if the source path resolves to outside this Filesystem's root
+     */
+    public function copyOut(string|File $source, string $destination, bool $allow_overwrite): void
+    {
+        $source = $this->root . PathNormalizer::normalize((string) $source, $this->root);
+        if (!is_file($source))
+            throw new FilesystemException("Source file does not exist: {$source}");
+        if (is_file($destination) && !$allow_overwrite)
+            throw new FilesystemException("Destination file already exists and overwriting is not allowed: {$destination}");
+        FilesystemHelper::recursivelyCreateDirectory(dirname($destination));
+        copy($source, $destination);
+    }
+
+    /**
+     * Move a file from a source inside this Filesystem to a destination anywhere else. Accepts File objects and both relative and absolute paths, but will throw an exception if the source path is outside this Filesystem's root.
+     * 
+     * @throws FilesystemException if a directory exists at the given target location
+     * @throws FilesystemSecurityException if the source path resolves to outside this Filesystem's root
+     */
+    public function moveOut(string|File $source, string $destination, bool $allow_overwrite): void
+    {
+        $this->copyOut($source, $destination, $allow_overwrite);
+        $source = $this->root . PathNormalizer::normalize((string) $source, $this->root);
+        unlink($source);
+    }
+
+    /**
+     * Copy a file from a source anywhere else to a destination inside this Filesystem. Accepts File objects and both relative and absolute paths, but will throw an exception if the destination path is outside this Filesystem's root.
+     * 
+     * @throws FilesystemException if a directory exists at the given target location
+     * @throws FilesystemSecurityException if the destination path resolves to outside this Filesystem's root
+     */
+    public function copyIn(string $source, string|File $destination, bool $allow_overwrite): void
+    {
+        if (is_uploaded_file($source))
+            throw new FilesystemException("Cannot copy uploaded file - use moveIn() instead: {$source}");
+
+        $destination = $this->root . PathNormalizer::normalize((string) $destination, $this->root);
+        if (!is_file($source))
+            throw new FilesystemException("Source file does not exist: {$source}");
+        if (is_file($destination) && !$allow_overwrite)
+            throw new FilesystemException("Destination file already exists and overwriting is not allowed: {$destination}");
+        FilesystemHelper::recursivelyCreateDirectory(dirname($destination));
+        copy($source, $destination);
+    }
+
+    /**
+     * Move a file from a source anywhere else to a destination inside this Filesystem. Accepts File objects and both relative and absolute paths, but will throw an exception if the destination path is outside this Filesystem's root.
+     * 
+     * @throws FilesystemException if a directory exists at the given target location
+     * @throws FilesystemSecurityException if the destination path resolves to outside this Filesystem's root
+     */
+    public function moveIn(string $source, string|File $destination, bool $allow_overwrite, bool $allow_uploaded_files = false): void
+    {
+        $destination = $this->root . PathNormalizer::normalize((string) $destination, $this->root);
+        if (!is_file($source))
+            throw new FilesystemException("Source file does not exist: {$source}");
+        if (is_file($destination) && !$allow_overwrite)
+            throw new FilesystemException("Destination file already exists and overwriting is not allowed: {$destination}");
+        FilesystemHelper::recursivelyCreateDirectory(dirname($destination));
+
+        if (is_uploaded_file($source)) {
+            if (!$allow_uploaded_files)
+                throw new FilesystemException("Moving in uploaded file blocked: {$source}");
+            move_uploaded_file($source, $destination);
+        }
+        else {
+            copy($source, $destination);
+            unlink($source);
+        }
     }
 
     /**
@@ -79,8 +155,8 @@ class Filesystem
      * 
      * Note that this method does not immediately create the directory on disk or its parent directories; it only returns a Directory object that can be used to create or manipulate the directory.
      * 
-     * @throws FilesystemException if a file exists at the given root path
-     * @throws FilesystemSecurityException if the path resolves to outside the given root
+     * @throws FilesystemException if a file exists at this Filesystem's root path
+     * @throws FilesystemSecurityException if the path resolves to outside this Filesystem's root
      */
     public function directory(string $path, bool $create = false): Directory|null
     {

@@ -265,6 +265,80 @@ $source = $fs->file('document.pdf');
 $fs->copy($source, 'archive/document.pdf', allow_overwrite: false);
 ```
 
+## Crossing the Security Boundary
+
+While `copy()` and `move()` work within the filesystem's root, you can also move files in and out of the bounded directory. The caveat is that to avoid accidentally breaking isolation, the operations must explicitly use methdods that anchor one end of the operation in the Filesystem's root.
+
+### Copying and Moving Files Out
+
+Export files from the secured filesystem to anywhere else:
+```php
+$fs = new Filesystem('/var/www/uploads');
+
+// Copy file out to arbitrary location
+$fs->copyOut('user/avatar.jpg', '/tmp/backup.jpg', allow_overwrite: false);
+
+// Move file out (removes from filesystem)
+$fs->moveOut('temp/export.csv', '/var/exports/data.csv', allow_overwrite: true);
+
+// Source path still validated against root
+try {
+    $fs->copyOut('../../etc/passwd', '/tmp/bad.txt', false);
+} catch (FilesystemSecurityException $e) {
+    // Prevented - source must be within filesystem root
+}
+```
+
+### Copying and Moving Files In
+
+Import files from arbitrary locations into the secured filesystem:
+```php
+$fs = new Filesystem('/var/www/uploads');
+
+// Copy file in from anywhere
+$fs->copyIn('/tmp/import.csv', 'data/imported.csv', allow_overwrite: false);
+
+// Move file in (removes from source location)
+$fs->moveIn('/tmp/upload.jpg', 'images/photo.jpg', allow_overwrite: true);
+
+// Destination path still validated against root
+try {
+    $fs->copyIn('/tmp/file.txt', '../../escape.txt', false);
+} catch (FilesystemSecurityException $e) {
+    // Prevented - destination must be within filesystem root
+}
+```
+
+### Handling Uploaded Files
+
+For PHP uploaded files, use `moveIn()` with `allow_uploaded_files: true`:
+```php
+// In a file upload handler
+if (isset($_FILES['upload']) && $_FILES['upload']['error'] === UPLOAD_ERR_OK) {
+    $tmpPath = $_FILES['upload']['tmp_name'];
+    $filename = basename($_FILES['upload']['name']);
+    
+    $uploads = new Filesystem('/var/www/uploads');
+    
+    try {
+        // Must explicitly allow uploaded files for security
+        $uploads->moveIn(
+            $tmpPath, 
+            "user-{$userId}/{$filename}", 
+            allow_overwrite: false,
+            allow_uploaded_files: true
+        );
+        echo "File uploaded successfully!";
+    } catch (FilesystemException $e) {
+        echo "Upload failed: " . $e->getMessage();
+    }
+}
+```
+
+The `allow_uploaded_files` parameter is required as an explicit safeguard - it prevents accidentally moving uploaded files without proper validation. This forces you to consciously handle uploaded files differently from regular filesystem operations.
+
+**Note**: `copyIn()` will throw an exception if you try to copy an uploaded file - you must use `moveIn()` instead, as uploaded files should always be moved, not copied.
+
 ## Nested Filesystems
 
 Create a new `Filesystem` rooted at a subdirectory:
