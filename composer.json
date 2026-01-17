@@ -1,0 +1,30 @@
+{
+    "name": "joby/smol-fs",
+    "description": "A lightweight and simple filesystem abstraction layer with useful features and built-in traversal attack protection.",
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "Joby\\Smol\\Filesystem\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Joby\\Smol\\Filesystem\\": "tests/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Joby Elliott",
+            "email": "code@joby.lol"
+        }
+    ],
+    "require-dev": {
+        "php": ">=8.3",
+        "phpunit/phpunit": "^12.1",
+        "phpstan/phpstan": "^2.1"
+    }
+}
