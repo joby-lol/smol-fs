@@ -49,7 +49,7 @@ class Directory implements Stringable
             return $this;
         }
         // Non-recursive delete and return
-        if (!rmdir($this->path))
+        if (!@rmdir($this->path))
             throw new FilesystemException("Failed to delete directory: {$this->path}");
         return $this;
     }

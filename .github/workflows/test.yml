@@ -12,21 +12,25 @@ jobs:
         php-versions: [8.3, 8.4, 8.5]
     steps:
       - uses: actions/checkout@v4
-      - uses: php-actions/composer@v6
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
         with:
-          php_version: ${{ matrix.php-versions }}
-      - uses: php-actions/phpunit@v4
-        with:
-          php_version: ${{ matrix.php-versions }}
-          configuration: phpunit.xml
+          php-version: ${{ matrix.php-versions }}
+          coverage: none
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+      - name: Run tests
+        run: vendor/bin/phpunit
   static-analysis:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: php-actions/composer@v6
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
         with:
-          php_version: 8.3
-      - uses: php-actions/phpstan@v3
-        with:
-          php_version: 8.3
-          configuration: phpstan.neon
+          php-version: 8.3
+          coverage: none
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+      - name: Run PHPStan
+        run: vendor/bin/phpstan analyze
