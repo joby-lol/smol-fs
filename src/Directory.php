@@ -68,6 +68,26 @@ class Directory implements Stringable
     }
 
     /**
+     * Get the first File object matching the given glob pattern in this directory, or null if none match. If $filter is provided, it will be called for each File object and only those for which it returns true will be considered.
+     * 
+     * Glob brace is enabled, so you can use the following special characters:
+     * - *: matches any number of any characters except directory separators
+     * - ?: matches any single character except directory separators
+     * - [...]: matches any one of the enclosed characters, if is ! matches any character not enclosed
+     * - {x,y,z}: matches any of the comma-separated subpatterns x, y, z
+     * - \: escapes the next character
+     * 
+     * @param string $glob optional glob pattern to match files against
+     * @param (callable(File):bool)|null $filter optional filter function that takes a File object and returns true to include it, false to exclude it
+     * @return File|null
+     */
+    public function globFile(string $glob, callable|null $filter = null): File|null
+    {
+        $files = FilesystemHelper::getFilesInDirectory($this->root, $this->path, $glob, $filter);
+        return count($files) > 0 ? $files[0] : null;
+    }
+
+    /**
      * Get a Directory representation for the given path, or null if it does not exist and $create is false. For creating a directory, you should still use this method with $create set to true and then call write() from the returned Directory object.
      * 
      * Note that this method does not immediately create the directory on disk or its parent directories; it only returns a Directory object that can be used to create or manipulate the directory.
@@ -78,6 +98,26 @@ class Directory implements Stringable
     public function directory(string $path, bool $create = false): Directory|null
     {
         return FilesystemHelper::getDirectoryInDirectory($this->root, $path, $create, $this->path);
+    }
+
+    /**
+     * Get the first Directory object matching the given glob pattern in this directory, or null if none match. If $filter is provided, it will be called for each Directory object and only those for which it returns true will be considered.
+     * 
+     * Glob brace is enabled, so you can use the following special characters:
+     * - *: matches any number of any characters except directory separators
+     * - ?: matches any single character except directory separators
+     * - [...]: matches any one of the enclosed characters, if is ! matches any character not enclosed
+     * - {x,y,z}: matches any of the comma-separated subpatterns x, y, z
+     * - \: escapes the next character
+     * 
+     * @param string $glob optional glob pattern to match directories against
+     * @param (callable(Directory):bool)|null $filter optional filter function that takes a Directory object and returns true to include it, false to exclude it
+     * @return Directory|null
+     */
+    public function globDirectory(string $glob, callable|null $filter = null): Directory|null
+    {
+        $dirs = FilesystemHelper::getDirectoriesInDirectory($this->root, $this->path, $glob, $filter);
+        return count($dirs) > 0 ? $dirs[0] : null;
     }
 
     /**

@@ -336,6 +336,141 @@ class FilesystemTest extends TestCase
         $this->assertCount(1, $dirs);
     }
 
+    public function test_globFile_returns_first_matching_file(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+        touch($this->testRoot . '/test1.txt');
+        touch($this->testRoot . '/test2.txt');
+        touch($this->testRoot . '/other.md');
+
+        $file = $fs->globFile('*.txt');
+
+        $this->assertInstanceOf(File::class, $file);
+        $this->assertStringEndsWith('.txt', $file->path);
+    }
+
+    public function test_globFile_returns_null_when_no_match(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+        touch($this->testRoot . '/file.txt');
+
+        $file = $fs->globFile('*.md');
+
+        $this->assertNull($file);
+    }
+
+    public function test_globFile_supports_glob_brace_syntax(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+        touch($this->testRoot . '/file.txt');
+        touch($this->testRoot . '/file.md');
+        touch($this->testRoot . '/file.log');
+
+        $file = $fs->globFile('*.{md,log}');
+
+        $this->assertInstanceOf(File::class, $file);
+        $this->assertTrue(
+            str_ends_with($file->path, '.md') || str_ends_with($file->path, '.log')
+        );
+    }
+
+    public function test_globFile_respects_filter_function(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+        touch($this->testRoot . '/small.txt');
+        file_put_contents($this->testRoot . '/large.txt', str_repeat('x', 1000));
+
+        $file = $fs->globFile('*.txt', fn(File $f) => $f->size() > 100);
+
+        $this->assertInstanceOf(File::class, $file);
+        $this->assertStringContainsString('large.txt', $file->path);
+    }
+
+    public function test_globFile_applies_filter_after_glob_match(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+        touch($this->testRoot . '/small.txt');
+        file_put_contents($this->testRoot . '/large.txt', str_repeat('x', 1000));
+        touch($this->testRoot . '/other.md');
+
+        $file = $fs->globFile('*.txt', fn(File $f) => $f->size() > 100);
+
+        $this->assertInstanceOf(File::class, $file);
+        $this->assertStringContainsString('large.txt', $file->path);
+    }
+
+    public function test_globFile_returns_null_when_filter_excludes_all(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+        touch($this->testRoot . '/file1.txt');
+        touch($this->testRoot . '/file2.txt');
+
+        $file = $fs->globFile('*.txt', fn(File $f) => false);
+
+        $this->assertNull($file);
+    }
+
+    public function test_globDirectory_returns_first_matching_directory(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+        mkdir($this->testRoot . '/test1');
+        mkdir($this->testRoot . '/test2');
+        mkdir($this->testRoot . '/other');
+
+        $dir = $fs->globDirectory('test*');
+
+        $this->assertInstanceOf(Directory::class, $dir);
+        $this->assertStringContainsString('test', $dir->path);
+    }
+
+    public function test_globDirectory_returns_null_when_no_match(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+        mkdir($this->testRoot . '/dir');
+
+        $dir = $fs->globDirectory('nomatch*');
+
+        $this->assertNull($dir);
+    }
+
+    public function test_globDirectory_supports_glob_brace_syntax(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+        mkdir($this->testRoot . '/prod-env');
+        mkdir($this->testRoot . '/test-env');
+        mkdir($this->testRoot . '/other');
+
+        $dir = $fs->globDirectory('{prod,test}-*');
+
+        $this->assertInstanceOf(Directory::class, $dir);
+        $this->assertTrue(
+            str_contains($dir->path, 'prod-') || str_contains($dir->path, 'test-')
+        );
+    }
+
+    public function test_globDirectory_respects_filter_function(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+        mkdir($this->testRoot . '/alpha');
+        mkdir($this->testRoot . '/beta');
+
+        $dir = $fs->globDirectory('*', fn(Directory $d) => str_contains($d->path, 'beta'));
+
+        $this->assertInstanceOf(Directory::class, $dir);
+        $this->assertStringContainsString('beta', $dir->path);
+    }
+
+    public function test_globDirectory_returns_null_when_filter_excludes_all(): void
+    {
+        $fs = new Filesystem($this->testRoot);
+        mkdir($this->testRoot . '/dir1');
+        mkdir($this->testRoot . '/dir2');
+
+        $dir = $fs->globDirectory('*', fn(Directory $d) => false);
+
+        $this->assertNull($dir);
+    }
+
     public function test_filesystem_creates_new_filesystem_at_subpath(): void
     {
         $fs = new Filesystem($this->testRoot);

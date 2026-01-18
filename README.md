@@ -196,6 +196,42 @@ $recentImages = $dir->files(
 );
 ```
 
+### Finding a Single File or Directory
+
+When you need just the first match rather than all matches, use `globFile()` and `globDirectory()`:
+
+```php
+$dir = $fs->directory('uploads');
+
+// Find first matching file
+$readme = $dir->globFile('README*');
+$config = $dir->globFile('*.{json,yml}');
+
+// Find first matching directory
+$latestBackup = $dir->globDirectory('backup-*');
+
+// With filter functions
+$largeImage = $dir->globFile('*.jpg', fn($f) => $f->size() > 1000000);
+$recentDir = $dir->globDirectory('*', fn($d) => $d->modified() > new DateTime('-1 day'));
+
+// Returns null if no matches
+$notFound = $dir->globFile('*.xyz'); // null
+```
+
+These methods work on both `Filesystem` and `Directory` objects:
+
+```php
+$fs = new Filesystem('/var/www/data');
+
+// Find in root
+$mainConfig = $fs->globFile('config.{json,yml}');
+$logsDir = $fs->globDirectory('logs*');
+
+// Find in subdirectory
+$uploadsDir = $fs->directory('uploads');
+$avatar = $uploadsDir->globFile('avatar.*');
+```
+
 ### Directory Information
 
 ```php
@@ -244,6 +280,11 @@ $yearDirs = $fs->directories('20*');
 
 // With filters
 $recentFiles = $fs->files(null, fn($f) => $f->modified() > new DateTime('-1 day'));
+
+// Find first match with glob methods
+$readme = $fs->globFile('README*');
+$configFile = $fs->globFile('*.{json,yml,yaml}');
+$logsDir = $fs->globDirectory('logs-*');
 ```
 
 ## Copy and Move Operations
