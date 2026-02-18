@@ -59,6 +59,8 @@ class Directory implements Stringable
      * 
      * Note that this method does not immediately create the file on disk or its parent directories; it only returns a File object that can be used to create or manipulate the file.
      * 
+     * @return ($create is true ? File : File|null)
+     * 
      * @throws FilesystemException if a directory exists at the given root path
      * @throws FilesystemSecurityException if the path resolves to outside this directory
      */
@@ -91,6 +93,8 @@ class Directory implements Stringable
      * Get a Directory representation for the given path, or null if it does not exist and $create is false. For creating a directory, you should still use this method with $create set to true and then call write() from the returned Directory object.
      * 
      * Note that this method does not immediately create the directory on disk or its parent directories; it only returns a Directory object that can be used to create or manipulate the directory.
+     * 
+     * @return ($create is true ? Directory : Directory|null)
      * 
      * @throws FilesystemException if a file exists at the given root path
      * @throws FilesystemSecurityException if the path resolves to outside this directory
