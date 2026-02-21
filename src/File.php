@@ -79,7 +79,7 @@ class File implements Stringable
         $source_handle = fopen($source, 'r+');
         if ($source_handle === false)
             throw new FilesystemException("Failed to open file for reading: $source");
-        if (!$this->acquireLock($handle, LOCK_EX))
+        if (!$this->acquireLock($source_handle, LOCK_EX))
             throw new FilesystemException("Failed to acquire lock for file $source");
         // Truncate the file after acquiring both locks
         ftruncate($handle, 0);
@@ -87,13 +87,18 @@ class File implements Stringable
         $remaining = filesize($source);
         $written = 0;
         while ($remaining > 0) {
-            $result = fwrite($handle, fread($source_handle, max($remaining, 8192)));
+            $next_data = fread($source_handle, max($remaining, 8192));
+            if ($next_data === false)
+                throw new FilesystemException("Failed mid-stream to read data from file: $source");
+            $result = fwrite($handle, $next_data);
             if ($result === false)
                 throw new FilesystemException("Failed mid-stream to write data to file: {$this->path}");
             $written += $result;
             $remaining -= $result;
         }
         // Unlock and close
+        flock($source_handle, LOCK_UN);
+        fclose($source_handle);
         flock($handle, LOCK_UN);
         fclose($handle);
         return $this;
