@@ -491,4 +491,137 @@ class FileTest extends TestCase
         $this->assertEquals('subdir/file.txt', $file->relativePath());
     }
 
+    public function test_copyFrom_copies_content_from_string_path(): void
+    {
+        $source = $this->testRoot . 'source.txt';
+        file_put_contents($source, 'Source content');
+
+        $file = new File($this->testRoot . 'dest.txt', $this->testRoot);
+        $file->copyFrom($source);
+
+        $this->assertTrue($file->exists());
+        $this->assertEquals('Source content', $file->read());
+    }
+
+    public function test_copyFrom_copies_content_from_file_object(): void
+    {
+        $source = new File($this->testRoot . 'source.txt', $this->testRoot);
+        $source->write('Source content');
+
+        $file = new File($this->testRoot . 'dest.txt', $this->testRoot);
+        $file->copyFrom($source);
+
+        $this->assertEquals('Source content', $file->read());
+    }
+
+    public function test_copyFrom_overwrites_existing_content(): void
+    {
+        $source = $this->testRoot . 'source.txt';
+        file_put_contents($source, 'New content');
+
+        $file = new File($this->testRoot . 'dest.txt', $this->testRoot);
+        $file->write('Old content');
+        $file->copyFrom($source);
+
+        $this->assertEquals('New content', $file->read());
+    }
+
+    public function test_copyFrom_creates_parent_directories(): void
+    {
+        $source = $this->testRoot . 'source.txt';
+        file_put_contents($source, 'Content');
+
+        $file = new File($this->testRoot . 'deep' . DIRECTORY_SEPARATOR . 'nested' . DIRECTORY_SEPARATOR . 'dest.txt', $this->testRoot);
+        $file->copyFrom($source);
+
+        $this->assertTrue($file->exists());
+        $this->assertEquals('Content', $file->read());
+    }
+
+    public function test_copyFrom_returns_self_for_chaining(): void
+    {
+        $source = $this->testRoot . 'source.txt';
+        file_put_contents($source, 'Content');
+
+        $file = new File($this->testRoot . 'dest.txt', $this->testRoot);
+        $result = $file->copyFrom($source);
+
+        $this->assertSame($file, $result);
+    }
+
+    public function test_copyFrom_throws_exception_for_nonexistent_source(): void
+    {
+        $file = new File($this->testRoot . 'dest.txt', $this->testRoot);
+
+        $this->expectException(\RuntimeException::class);
+        $file->copyFrom($this->testRoot . 'nonexistent.txt');
+    }
+
+    public function test_copyFrom_throws_exception_for_nonexistent_file_object(): void
+    {
+        $source = new File($this->testRoot . 'nonexistent.txt', $this->testRoot);
+        $file = new File($this->testRoot . 'dest.txt', $this->testRoot);
+
+        $this->expectException(\RuntimeException::class);
+        $file->copyFrom($source);
+    }
+
+    public function test_copyFrom_does_not_modify_source(): void
+    {
+        $source = $this->testRoot . 'source.txt';
+        file_put_contents($source, 'Original source');
+
+        $file = new File($this->testRoot . 'dest.txt', $this->testRoot);
+        $file->copyFrom($source);
+
+        $this->assertEquals('Original source', file_get_contents($source));
+    }
+
+    public function test_copyFrom_copies_empty_file(): void
+    {
+        $source = $this->testRoot . 'source.txt';
+        file_put_contents($source, '');
+
+        $file = new File($this->testRoot . 'dest.txt', $this->testRoot);
+        $file->copyFrom($source);
+
+        $this->assertTrue($file->exists());
+        $this->assertEquals('', $file->read());
+    }
+
+    public function test_copyFrom_copies_large_file(): void
+    {
+        $source = $this->testRoot . 'source.txt';
+        $largeContent = str_repeat('x', 1000000); // 1MB
+        file_put_contents($source, $largeContent);
+
+        $file = new File($this->testRoot . 'dest.txt', $this->testRoot);
+        $file->copyFrom($source);
+
+        $this->assertEquals($largeContent, $file->read());
+    }
+
+    public function test_copyFrom_copies_binary_content(): void
+    {
+        $source = $this->testRoot . 'source.bin';
+        $binary = "\x00\x01\x02\xFF\xFE\xFD";
+        file_put_contents($source, $binary);
+
+        $file = new File($this->testRoot . 'dest.bin', $this->testRoot);
+        $file->copyFrom($source);
+
+        $this->assertEquals($binary, $file->read());
+    }
+
+    public function test_copyFrom_chained_with_other_methods(): void
+    {
+        $source = $this->testRoot . 'source.txt';
+        file_put_contents($source, 'Copied content');
+
+        $file = new File($this->testRoot . 'dest.txt', $this->testRoot);
+        $file->copyFrom($source)->append(' with addition');
+
+        $this->assertEquals('Copied content with addition', $file->read());
+    }
+
 }

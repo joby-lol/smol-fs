@@ -62,6 +62,44 @@ class File implements Stringable
     }
 
     /**
+     * Copy data to the file from an existing file, replacing any existing content.
+     */
+    public function copyFrom(string $source): static
+    {
+        // Ensure parent directory exists and acquire lock
+        FilesystemHelper::recursivelyCreateDirectory(dirname($this->path));
+        $handle = fopen($this->path, 'c');
+        if ($handle === false)
+            throw new FilesystemException("Failed to open file for writing: {$this->path}");
+        if (!$this->acquireLock($handle, LOCK_EX)) {
+            fclose($handle);
+            throw new FilesystemException("Failed to acquire lock for file: {$this->path}");
+        }
+        // Open source handle and attempt to acquire a lock
+        $source_handle = fopen($source, 'r+');
+        if ($source_handle === false)
+            throw new FilesystemException("Failed to open file for reading: $source");
+        if (!$this->acquireLock($handle, LOCK_EX))
+            throw new FilesystemException("Failed to acquire lock for file $source");
+        // Truncate the file after acquiring both locks
+        ftruncate($handle, 0);
+        // Write data in a loop to handle partial writes
+        $remaining = filesize($source);
+        $written = 0;
+        while ($remaining > 0) {
+            $result = fwrite($handle, fread($source_handle, max($remaining, 8192)));
+            if ($result === false)
+                throw new FilesystemException("Failed mid-stream to write data to file: {$this->path}");
+            $written += $result;
+            $remaining -= $result;
+        }
+        // Unlock and close
+        flock($handle, LOCK_UN);
+        fclose($handle);
+        return $this;
+    }
+
+    /**
      * Delete the file if it exists.
      */
     public function delete(): static
