@@ -11,6 +11,9 @@ namespace Joby\Smol\Filesystem;
 
 use DateTimeImmutable;
 
+/**
+ * Representation of one or more directories that all exist at the same relative path to multiple Filesystems. Operations will occur on the first-matched item. Operations that return child files/directories will themselves aggregate from all sources.
+ */
 class AggregateDirectory implements DirectoryInterface
 {
 

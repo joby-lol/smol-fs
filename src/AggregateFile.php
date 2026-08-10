@@ -10,7 +10,11 @@
 namespace Joby\Smol\Filesystem;
 
 use DateTimeImmutable;
+use Generator;
 
+/**
+ * Representation of one or more files that all exist at the same relative path to multiple Filesystems. Standard operations will occur on the first-matched item.
+ */
 class AggregateFile implements FileInterface
 {
 
@@ -27,6 +31,54 @@ class AggregateFile implements FileInterface
     )
     {
         $this->files = [$main_file, ...$files];
+    }
+
+    /**
+     * Read all existing source files from this object, concatenated into a single string with the given separator between them.
+     * 
+     * @param string $separator
+     * @return string|false
+     */
+    public function readConcatenated(string $separator = PHP_EOL): string|false
+    {
+        $files = [...$this->rawExistingFiles()];
+        if (!$files)
+            return false;
+        return implode(
+            $separator,
+            array_map(
+                fn(FileInterface $f) => $f->read(),
+                $files,
+            ),
+        );
+    }
+
+    /**
+     * Get all source files in this object.
+     * 
+     * @return Generator<int, FileInterface>
+     */
+    public function rawFiles(): Generator
+    {
+        $files = [];
+        foreach ($this->files as $file)
+            if ($file instanceof AggregateFile)
+                foreach ($file->rawFiles() as $raw_file)
+                    yield $raw_file;
+            else
+                yield $file;
+    }
+
+    /**
+     * Get all source files in this object that actually exist on disk.
+     * 
+     * @return Generator<int, FileInterface>
+     */
+    public function rawExistingFiles(): Generator
+    {
+        foreach ($this->files as $file)
+            if ($file->exists())
+                yield $file;
     }
 
     /**

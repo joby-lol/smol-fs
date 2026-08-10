@@ -10,7 +10,7 @@
 namespace Joby\Smol\Filesystem;
 
 /**
- * Helper for working with multiple filesystem root as if they were a single filesystem. Allows multiple Filesystem objects to be aggregated, and queried.
+ * Helper for working with multiple filesystem root as if they were a single filesystem. Allows multiple Filesystem objects to be aggregated and queried.
  */
 class AggregateFilesystem implements FilesystemInterface
 {
