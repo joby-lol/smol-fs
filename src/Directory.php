@@ -9,13 +9,12 @@
 
 namespace Joby\Smol\Filesystem;
 
-use DateTime;
-use Stringable;
+use DateTimeImmutable;
 
 /**
  * Representation of a single directory, with utility methods for working with it.
  */
-class Directory implements Stringable
+class Directory implements DirectoryInterface
 {
 
     /**
@@ -28,7 +27,7 @@ class Directory implements Stringable
     ) {}
 
     /**
-     * Create the directory and any parent directories as needed, if it does not already exist.
+     * @inheritDoc
      */
     public function create(): static
     {
@@ -37,9 +36,7 @@ class Directory implements Stringable
     }
 
     /**
-     * Delete the directory. If $recursive is true, delete all contents recursively.
-     * 
-     * @throws FilesystemException if deletion fails
+     * @inheritDoc
      */
     public function delete(bool $recursive = false): static
     {
@@ -55,14 +52,7 @@ class Directory implements Stringable
     }
 
     /**
-     * Get a File representation for the given path, or null if it does not exist and $create is false. For creating a file, you should still use this method with $create set to true and then call write() from the returned File object.
-     * 
-     * Note that this method does not immediately create the file on disk or its parent directories; it only returns a File object that can be used to create or manipulate the file.
-     * 
-     * @return ($create is true ? File : File|null)
-     * 
-     * @throws FilesystemException if a directory exists at the given root path
-     * @throws FilesystemSecurityException if the path resolves to outside this directory
+     * @inheritDoc
      */
     public function file(string $path, bool $create = false): File|null
     {
@@ -70,18 +60,7 @@ class Directory implements Stringable
     }
 
     /**
-     * Get the first File object matching the given glob pattern in this directory, or null if none match. If $filter is provided, it will be called for each File object and only those for which it returns true will be considered.
-     * 
-     * Glob brace is enabled, so you can use the following special characters:
-     * - *: matches any number of any characters except directory separators
-     * - ?: matches any single character except directory separators
-     * - [...]: matches any one of the enclosed characters, if is ! matches any character not enclosed
-     * - {x,y,z}: matches any of the comma-separated subpatterns x, y, z
-     * - \: escapes the next character
-     * 
-     * @param string $glob optional glob pattern to match files against
-     * @param (callable(File):bool)|null $filter optional filter function that takes a File object and returns true to include it, false to exclude it
-     * @return File|null
+     * @inheritDoc
      */
     public function globFile(string $glob, callable|null $filter = null): File|null
     {
@@ -90,14 +69,7 @@ class Directory implements Stringable
     }
 
     /**
-     * Get a Directory representation for the given path, or null if it does not exist and $create is false. For creating a directory, you should still use this method with $create set to true and then call write() from the returned Directory object.
-     * 
-     * Note that this method does not immediately create the directory on disk or its parent directories; it only returns a Directory object that can be used to create or manipulate the directory.
-     * 
-     * @return ($create is true ? Directory : Directory|null)
-     * 
-     * @throws FilesystemException if a file exists at the given root path
-     * @throws FilesystemSecurityException if the path resolves to outside this directory
+     * @inheritDoc
      */
     public function directory(string $path, bool $create = false): Directory|null
     {
@@ -105,18 +77,7 @@ class Directory implements Stringable
     }
 
     /**
-     * Get the first Directory object matching the given glob pattern in this directory, or null if none match. If $filter is provided, it will be called for each Directory object and only those for which it returns true will be considered.
-     * 
-     * Glob brace is enabled, so you can use the following special characters:
-     * - *: matches any number of any characters except directory separators
-     * - ?: matches any single character except directory separators
-     * - [...]: matches any one of the enclosed characters, if is ! matches any character not enclosed
-     * - {x,y,z}: matches any of the comma-separated subpatterns x, y, z
-     * - \: escapes the next character
-     * 
-     * @param string $glob optional glob pattern to match directories against
-     * @param (callable(Directory):bool)|null $filter optional filter function that takes a Directory object and returns true to include it, false to exclude it
-     * @return Directory|null
+     * @inheritDoc
      */
     public function globDirectory(string $glob, callable|null $filter = null): Directory|null
     {
@@ -125,21 +86,7 @@ class Directory implements Stringable
     }
 
     /**
-     * Get an array of File objects representing the files in this directory. If $glob is provided, only files matching the glob pattern will be returned. If $filter is provided, it will be called for each File object and only those for which it returns true will be included.
-     * 
-     * Glob brace is enabled, so you can use the following special characters:
-     * - *: matches any number of any characters except directory separators
-     * - ?: matches any single character except directory separators
-     * - [...]: matches any one of the enclosed characters, if is ! matches any character not enclosed
-     * - {x,y,z}: matches any of the comma-separated subpatterns x, y, z
-     * - \: escapes the next character
-     * 
-     * @param string|null $glob optional glob pattern to match files against
-     * @param (callable(File):bool)|null $filter optional filter function that takes a File object and returns true to include it, false to exclude it
-     * @return File[] array of File objects
-     * 
-     * @throws FilesystemException if reading the directory contents fails
-     * @throws FilesystemSecurityException if any paths resolve to outside this directory
+     * @inheritDoc
      */
     public function files(string|null $glob = null, callable|null $filter = null): array
     {
@@ -147,21 +94,7 @@ class Directory implements Stringable
     }
 
     /**
-     * Get an array of Directory objects representing the directories in this directory. If $glob is provided, only directories matching the glob pattern will be returned. If $filter is provided, it will be called for each File object and only those for which it returns true will be included.
-     * 
-     * Glob brace is enabled, so you can use the following special characters:
-     * - *: matches any number of any characters except directory separators
-     * - ?: matches any single character except directory separators
-     * - [...]: matches any one of the enclosed characters, if is ! matches any character not enclosed
-     * - {x,y,z}: matches any of the comma-separated subpatterns x, y, z
-     * - \: escapes the next character
-     * 
-     * @param string|null $glob optional glob pattern to match directories against
-     * @param (callable(Directory):bool)|null $filter optional filter function that takes a Directory object and returns true to include it, false to exclude it
-     * @return Directory[] array of Directory objects
-     * 
-     * @throws FilesystemException if reading the directory contents fails
-     * @throws FilesystemSecurityException if any paths resolve to outside this directory
+     * @inheritDoc
      */
     public function directories(string|null $glob = null, callable|null $filter = null): array
     {
@@ -169,22 +102,21 @@ class Directory implements Stringable
     }
 
     /**
-     * Get the last modified time of the directory, or null if it does not exist.
-     * 
-     * @throws FilesystemException if getting the modification time fails
+     * @inheritDoc
      */
-    public function modified(): DateTime|null
+    public function modified(): DateTimeImmutable|null
     {
         if (!$this->exists())
             return null;
         $timestamp = filemtime($this->path);
         if ($timestamp === false)
             throw new FilesystemException("Failed to get modification time for directory: {$this->path}");
-        return (new DateTime())->setTimestamp($timestamp);
+        // @phpstan-ignore-next-line
+        return DateTimeImmutable::createFromFormat("U", (string) $timestamp);
     }
 
     /**
-     * Check if the directory exists.
+     * @inheritDoc
      */
     public function exists(): bool
     {
@@ -192,7 +124,7 @@ class Directory implements Stringable
     }
 
     /**
-     * Get the base name of the directory (the last part of the path).
+     * @inheritDoc
      */
     public function basename(): string
     {
@@ -200,13 +132,25 @@ class Directory implements Stringable
     }
 
     /**
-     * Get the path of the directory relative to the root directory.
+     * @inheritDoc
      */
     public function relativePath(): string
     {
         return substr($this->path, strlen($this->root));
     }
 
+    /**
+     * @inheritDoc
+     */
+    public function contains(string $path): bool
+    {
+        $path = PathNormalizer::normalize($path, null);
+        return str_starts_with($path, $this);
+    }
+
+    /**
+     * @inheritDoc
+     */
     public function __toString(): string
     {
         return $this->path;

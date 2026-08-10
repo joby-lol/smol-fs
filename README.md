@@ -522,6 +522,21 @@ for ($i = 0; $i < $zip->numFiles; $i++) {
 }
 ```
 
+## Aggregate filesystems
+
+Classes for working with multiple files/folders as if they were a single filesystem are available by instantiating an `AggregateFilesystem` object. Aggregate filesystems allow you to query/glob on multiple Filesystem objects as if they were a single folder, and return `AggregateDirectory` objects that do the same in place of normal directories. They also return `AggregateFile` objects that pass through function calls to their first match for standard features, but provide additional tools for inspecting/iterating on all the matches they contain.
+
+```php
+// Construct an AggregateFilesystem with multiple template directories
+$templates = new AggregateFilesystem(
+    new Filesystem('/path/to/override_templates/'),
+    new Filesystem('/path/to/default_templates/')
+);
+
+// Query normally and get a file object that matches whatever was found in order of precedence
+$main = $templates->file('main.twig');
+```
+
 ## PHP version
 
 Fully cross-platform tested on PHP 8.3+, static analysis for PHP 8.1+.

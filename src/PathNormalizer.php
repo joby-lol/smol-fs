@@ -24,20 +24,24 @@ class PathNormalizer
      * 
      * @throws FilesystemSecurityException if anything suspicious is detected in the path
      */
-    public static function normalize(string $path, string $root, string|null $relative_to = null): string
+    public static function normalize(string $path, string|null $root, string|null $relative_to = null): string
     {
         // Validate for control characters
         if (preg_match('/[\x00-\x1F\x7F]/', $path))
             throw new FilesystemSecurityException("Path contains invalid control characters");
         // Normalize slashes
         $path_split = self::normalizeSlashes($path);
-        $root = self::normalizeSlashes($root);
-        $relative_to = $relative_to === null
-            ? $root
-            : self::normalizeSlashes($relative_to);
+        $root = $root
+            ? self::normalizeSlashes($root)
+            : null;
+        $relative_to = $relative_to
+            ? self::normalizeSlashes($relative_to)
+            : $root;
         // if this is a relative path, prepend the relative_to base path or root
         $absolute = str_starts_with($path_split, '/') || preg_match('/^[A-Za-z]:\//', $path_split);
         if (!$absolute) {
+            if ($relative_to === null)
+                throw new FilesystemException("Relative paths must include at leat one of a root or relative_to value");
             if (!str_ends_with($relative_to, '/'))
                 $relative_to .= '/';
             $path_split = $relative_to . $path_split;
@@ -64,11 +68,9 @@ class PathNormalizer
      * @param string[] $path
      * @throws FilesystemSecurityException
      */
-    protected static function normalizeAbsolutePath(array $path, string $root): string
+    protected static function normalizeAbsolutePath(array $path, string|null $root): string
     {
         $normalized = [];
-        if (!str_ends_with($root, '/'))
-            $root .= '/';
         foreach ($path as $part) {
             if ($part === '.') {
                 continue;
@@ -82,9 +84,13 @@ class PathNormalizer
             $normalized[] = $part;
         }
         $normalized = implode('/', $normalized);
-        if (!str_starts_with($normalized . '/', $root))
-            throw new FilesystemSecurityException("Path traversal above allowed root detected");
-        $normalized = substr($normalized, strlen($root));
+        if ($root !== null) {
+            if (!str_ends_with($root, '/'))
+                $root .= '/';
+            if (!str_starts_with($normalized . '/', $root))
+                throw new FilesystemSecurityException("Path traversal above allowed root detected");
+            $normalized = substr($normalized, strlen($root));
+        }
         return $normalized;
     }
 

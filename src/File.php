@@ -10,12 +10,12 @@
 namespace Joby\Smol\Filesystem;
 
 use DateTime;
-use Stringable;
+use DateTimeImmutable;
 
 /**
  * Representation of a single file, with utility methods for working with it.
  */
-class File implements Stringable
+class File implements FileInterface
 {
 
     /**
@@ -28,9 +28,7 @@ class File implements Stringable
     ) {}
 
     /**
-     * Write data to the file, replacing any existing content.
-     *
-     * @throws FilesystemException if writing fails
+     * @inheritDoc
      */
     public function write(string $data): static
     {
@@ -62,7 +60,7 @@ class File implements Stringable
     }
 
     /**
-     * Copy data to the file from an existing file, replacing any existing content.
+     * @inheritDoc
      */
     public function copyFrom(string $source): static
     {
@@ -105,7 +103,7 @@ class File implements Stringable
     }
 
     /**
-     * Delete the file if it exists.
+     * @inheritDoc
      */
     public function delete(): static
     {
@@ -118,9 +116,7 @@ class File implements Stringable
     }
 
     /**
-     * Append data to the end of the file.
-     *
-     * @throws FilesystemException if writing fails
+     * @inheritDoc
      */
     public function append(string $data): static
     {
@@ -150,13 +146,7 @@ class File implements Stringable
     }
 
     /**
-     * Append a line to the end of the file, adding a newline before it if needed.
-     * 
-     * This method ensures clean line separation without extraneous leading or trailing
-     * newlines. If the file has content that doesn't end with a newline, one is added
-     * before the new line. The appended line itself has no trailing newline.
-     *
-     * @throws FilesystemException if writing fails
+     * @inheritDoc
      */
     public function appendLine(string $line): static
     {
@@ -198,24 +188,21 @@ class File implements Stringable
     }
 
     /**
-     * Get the last modified time of the file, or null if the file does not exist.
-     * 
-     * @throws FilesystemException if getting the modification time fails
+     * @inheritDoc
      */
-    public function modified(): DateTime|null
+    public function modified(): DateTimeImmutable|null
     {
         if (!$this->exists())
             return null;
         $timestamp = filemtime($this->path);
         if ($timestamp === false)
             throw new FilesystemException("Failed to get modification time for file: {$this->path}");
-        return (new DateTime())->setTimestamp($timestamp);
+        // @phpstan-ignore-next-line
+        return DateTimeImmutable::createFromFormat("U", (string) $timestamp);
     }
 
     /**
-     * Read the entire contents of the file.
-     *
-     * @throws FilesystemException if reading fails
+     * @inheritDoc
      */
     public function read(): string|false
     {
@@ -241,7 +228,7 @@ class File implements Stringable
     }
 
     /**
-     * Check if the file exists.
+     * @inheritDoc
      */
     public function exists(): bool
     {
@@ -249,7 +236,7 @@ class File implements Stringable
     }
 
     /**
-     * Get the size of the file in bytes, or false if the file does not exist.
+     * @inheritDoc
      */
     public function size(): int|false
     {
@@ -259,7 +246,7 @@ class File implements Stringable
     }
 
     /**
-     * Get the filename (basename) of the file.
+     * @inheritDoc
      */
     public function filename(): string
     {
@@ -267,7 +254,7 @@ class File implements Stringable
     }
 
     /**
-     * Get the file extension, normalized to lower case.
+     * @inheritDoc
      */
     public function extension(): string
     {
@@ -275,7 +262,7 @@ class File implements Stringable
     }
 
     /**
-     * Get the path of the file relative to the root directory.
+     * @inheritDoc
      */
     public function relativePath(): string
     {
