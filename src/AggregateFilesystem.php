@@ -68,7 +68,7 @@ class AggregateFilesystem implements FilesystemInterface
      */
     public function copyOut(string|FileInterface $source, string $destination, bool $allow_overwrite): void
     {
-        if (!($source_fs = $this->parentFilesystem($destination)))
+        if (!($source_fs = $this->parentFilesystem($source)))
             throw new FilesystemException("Source file must be inside AggregateFilesystem: ${source}");
         $source_fs->copyOut($source, $destination, $allow_overwrite);
     }
@@ -85,10 +85,10 @@ class AggregateFilesystem implements FilesystemInterface
         foreach ($this->filesystems as $fs)
             foreach ($fs->directories($glob, $filter) as $dir)
                 $directories[$dir->relativePath()][] = $dir;
-        return array_map(
+        return array_values(array_map(
             fn(array $dirs): AggregateDirectory => new AggregateDirectory($this, ...$dirs),
             $directories,
-        );
+        ));
     }
 
     /**
@@ -141,10 +141,10 @@ class AggregateFilesystem implements FilesystemInterface
         foreach ($this->filesystems as $fs)
             foreach ($fs->files($glob, $filter) as $dir)
                 $files[$dir->relativePath()][] = $dir;
-        return array_map(
+        return array_values(array_map(
             fn(array $dirs): AggregateFile => new AggregateFile($this, ...$dirs),
             $files,
-        );
+        ));
     }
 
     /**
@@ -155,7 +155,7 @@ class AggregateFilesystem implements FilesystemInterface
     public function globDirectory(string $glob, callable|null $filter = null): AggregateDirectory|null
     {
         $directories = $this->directories($glob, $filter);
-        return (count($directories) == 0) ? null : $directories[0];
+        return $directories ? $directories[0] : null;
     }
 
     /**
@@ -164,7 +164,7 @@ class AggregateFilesystem implements FilesystemInterface
     public function globFile(string $glob, callable|null $filter = null): AggregateFile|null
     {
         $files = $this->files($glob, $filter);
-        return (count($files) == 0) ? null : $files[0];
+        return $files ? $files[0] : null;
     }
 
     /**
@@ -194,9 +194,9 @@ class AggregateFilesystem implements FilesystemInterface
      */
     public function moveOut(string|FileInterface $source, string $destination, bool $allow_overwrite): void
     {
-        if (!($destination_fs = $this->parentFilesystem($source)))
+        if (!($source_fs = $this->parentFilesystem($source)))
             throw new FilesystemException("Source file must be inside AggregateFilesystem: ${source}");
-        $destination_fs->moveOut($source, $destination, $allow_overwrite);
+        $source_fs->moveOut($source, $destination, $allow_overwrite);
     }
 
     /**

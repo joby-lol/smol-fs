@@ -82,10 +82,10 @@ class AggregateDirectory implements DirectoryInterface
         foreach ($this->directories as $dir)
             foreach ($dir->directories($glob, $filter) as $dir)
                 $directories[$dir->relativePath()][] = $dir;
-        return array_map(
+        return array_values(array_map(
             fn(array $dirs): AggregateDirectory => new AggregateDirectory($this->root, ...$dirs),
             $directories,
-        );
+        ));
     }
 
     /**
@@ -140,10 +140,10 @@ class AggregateDirectory implements DirectoryInterface
         foreach ($this->directories as $dir)
             foreach ($dir->files($glob, $filter) as $file)
                 $files[$file->relativePath()][] = $file;
-        return array_map(
+        return array_values(array_map(
             fn(array $files): AggregateFile => new AggregateFile($this->root, ...$files),
             $files,
-        );
+        ));
     }
 
     /**
@@ -154,7 +154,7 @@ class AggregateDirectory implements DirectoryInterface
     public function globDirectory(string $glob, callable|null $filter = null): AggregateDirectory|null
     {
         $directories = $this->directories($glob, $filter);
-        return (count($directories) == 0) ? null : $directories[0];
+        return $directories ? $directories[0] : null;
     }
 
     /**
@@ -165,7 +165,7 @@ class AggregateDirectory implements DirectoryInterface
     public function globFile(string $glob, callable|null $filter = null): AggregateFile|null
     {
         $files = $this->files($glob, $filter);
-        return (count($files) == 0) ? null : $files[0];
+        return $files ? $files[0] : null;
     }
 
     /**

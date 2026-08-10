@@ -41,7 +41,7 @@ class PathNormalizer
         $absolute = str_starts_with($path_split, '/') || preg_match('/^[A-Za-z]:\//', $path_split);
         if (!$absolute) {
             if ($relative_to === null)
-                throw new FilesystemException("Relative paths must include at leat one of a root or relative_to value");
+                throw new FilesystemException("Relative paths must include at least one of a root or relative_to value");
             if (!str_ends_with($relative_to, '/'))
                 $relative_to .= '/';
             $path_split = $relative_to . $path_split;
