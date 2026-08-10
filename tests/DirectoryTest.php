@@ -502,7 +502,7 @@ class DirectoryTest extends TestCase
 
         $modified = $dir->modified();
 
-        $this->assertInstanceOf(\DateTime::class, $modified);
+        $this->assertInstanceOf(\DateTimeImmutable::class, $modified);
     }
 
     public function test_modified_returns_null_for_nonexistent_directory(): void
