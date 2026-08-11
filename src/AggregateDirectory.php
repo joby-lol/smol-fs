@@ -73,7 +73,9 @@ class AggregateDirectory implements DirectoryInterface
     /**
      * @inheritDoc
      * 
-     * @return AggregateDirectory[]
+     * @param string|null $glob optional glob pattern to match directories against
+     * @param (callable(DirectoryInterface):bool)|null $filter optional filter function that takes a DirectoryInterface object and returns true to include it, false to exclude it
+     * @return AggregateDirectory[] array of Directory objects
      */
     public function directories(string|null $glob = null, callable|null $filter = null): array
     {
@@ -91,7 +93,7 @@ class AggregateDirectory implements DirectoryInterface
     /**
      * @inheritDoc
      * 
-     * @return AggregateDirectory
+     * @return ($create is true ? AggregateDirectory : AggregateDirectory|null)
      */
     public function directory(string $path, bool $create = false): AggregateDirectory|null
     {
@@ -115,7 +117,7 @@ class AggregateDirectory implements DirectoryInterface
     /**
      * @inheritDoc
      * 
-     * @return AggregateFile|null
+     * @return ($create is true ? AggregateFile : AggregateFile|null)
      */
     public function file(string $path, bool $create = false): AggregateFile|null
     {
@@ -131,7 +133,9 @@ class AggregateDirectory implements DirectoryInterface
     /**
      * @inheritDoc
      * 
-     * @return AggregateFile[]
+     * @param string|null $glob optional glob pattern to match files against
+     * @param (callable(FileInterface):bool)|null $filter optional filter function that takes a FileInterface object and returns true to include it, false to exclude it
+     * @return AggregateFile[] array of FileInterface objects
      */
     public function files(string|null $glob = null, callable|null $filter = null): array
     {
@@ -149,6 +153,8 @@ class AggregateDirectory implements DirectoryInterface
     /**
      * @inheritDoc
      * 
+     * @param string $glob optional glob pattern to match directories against
+     * @param (callable(DirectoryInterface):bool)|null $filter optional filter function that takes a DirectoryInterface object and returns true to include it, false to exclude it
      * @return AggregateDirectory|null
      */
     public function globDirectory(string $glob, callable|null $filter = null): AggregateDirectory|null
@@ -160,6 +166,8 @@ class AggregateDirectory implements DirectoryInterface
     /**
      * @inheritDoc
      * 
+     * @param string $glob optional glob pattern to match files against
+     * @param (callable(FileInterface):bool)|null $filter optional filter function that takes a FileInterface object and returns true to include it, false to exclude it
      * @return AggregateFile|null
      */
     public function globFile(string $glob, callable|null $filter = null): AggregateFile|null

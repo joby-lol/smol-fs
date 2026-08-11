@@ -53,6 +53,8 @@ class Directory implements DirectoryInterface
 
     /**
      * @inheritDoc
+     * 
+     * @return ($create is true ? File : File|null)
      */
     public function file(string $path, bool $create = false): File|null
     {
@@ -61,6 +63,10 @@ class Directory implements DirectoryInterface
 
     /**
      * @inheritDoc
+     * 
+     * @param string $glob optional glob pattern to match files against
+     * @param (callable(FileInterface):bool)|null $filter optional filter function that takes a FileInterface object and returns true to include it, false to exclude it
+     * @return File|null
      */
     public function globFile(string $glob, callable|null $filter = null): File|null
     {
@@ -70,6 +76,8 @@ class Directory implements DirectoryInterface
 
     /**
      * @inheritDoc
+     * 
+     * @return ($create is true ? Directory : Directory|null)
      */
     public function directory(string $path, bool $create = false): Directory|null
     {
@@ -78,6 +86,10 @@ class Directory implements DirectoryInterface
 
     /**
      * @inheritDoc
+     * 
+     * @param string $glob optional glob pattern to match directories against
+     * @param (callable(DirectoryInterface):bool)|null $filter optional filter function that takes a DirectoryInterface object and returns true to include it, false to exclude it
+     * @return Directory|null
      */
     public function globDirectory(string $glob, callable|null $filter = null): Directory|null
     {
@@ -87,6 +99,10 @@ class Directory implements DirectoryInterface
 
     /**
      * @inheritDoc
+     * 
+     * @param string|null $glob optional glob pattern to match files against
+     * @param (callable(FileInterface):bool)|null $filter optional filter function that takes a FileInterface object and returns true to include it, false to exclude it
+     * @return File[] array of File objects
      */
     public function files(string|null $glob = null, callable|null $filter = null): array
     {
@@ -95,6 +111,10 @@ class Directory implements DirectoryInterface
 
     /**
      * @inheritDoc
+     * 
+     * @param string|null $glob optional glob pattern to match directories against
+     * @param (callable(DirectoryInterface):bool)|null $filter optional filter function that takes a DirectoryInterface object and returns true to include it, false to exclude it
+     * @return Directory[] array of Directory objects
      */
     public function directories(string|null $glob = null, callable|null $filter = null): array
     {

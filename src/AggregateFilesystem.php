@@ -112,7 +112,9 @@ class AggregateFilesystem implements FilesystemInterface
     /**
      * @inheritDoc
      * 
-     * @return AggregateDirectory[]
+     * @param string|null $glob optional glob pattern to match directories against
+     * @param (callable(DirectoryInterface):bool)|null $filter optional filter function that takes a DirectoryInterface object and returns true to include it, false to exclude it
+     * @return AggregateDirectory[] array of DirectoryInterface objects
      */
     public function directories(string|null $glob = null, callable|null $filter = null): array
     {
@@ -134,7 +136,7 @@ class AggregateFilesystem implements FilesystemInterface
      * 
      * In any AggregateDirectory file creation occurs in the first match.
      * 
-     * @return AggregateDirectory|null
+     * @return ($create is true ? AggregateDirectory : AggregateDirectory|null)
      */
     public function directory(string $path, bool $create = false): AggregateDirectory|null
     {
@@ -152,7 +154,7 @@ class AggregateFilesystem implements FilesystemInterface
      * 
      * In an AggregateFilesystem this will return an AggregateFile that mostly functions the same as a normal File, treating the first match as the canonical content for that purpose, but offers a few extra features for concatenating its sub-files.
      * 
-     * @return AggregateFile|null
+     *@return ($create is true ? AggregateFile : AggregateFile|null)
      */
     public function file(string $path, bool $create = false): AggregateFile|null
     {
@@ -168,7 +170,9 @@ class AggregateFilesystem implements FilesystemInterface
     /**
      * @inheritDoc
      * 
-     * @return AggregateFile[]
+     * @param string|null $glob optional glob pattern to match files against
+     * @param (callable(FileInterface):bool)|null $filter optional filter function that takes a File object and returns true to include it, false to exclude it
+     * @return AggregateFile[] array of File objects
      */
     public function files(string|null $glob = null, callable|null $filter = null): array
     {
@@ -186,7 +190,9 @@ class AggregateFilesystem implements FilesystemInterface
     /**
      * @inheritDoc
      * 
-     * @return AggregateDirectory
+     * @param string $glob optional glob pattern to match directories against
+     * @param (callable(DirectoryInterface):bool)|null $filter optional filter function that takes a DirectoryInterface object and returns true to include it, false to exclude it
+     * @return AggregateDirectory|null
      */
     public function globDirectory(string $glob, callable|null $filter = null): AggregateDirectory|null
     {
@@ -196,6 +202,10 @@ class AggregateFilesystem implements FilesystemInterface
 
     /**
      * @inheritDoc
+     * 
+     * @param string $glob optional glob pattern to match files against
+     * @param (callable(FileInterface):bool)|null $filter optional filter function that takes a File object and returns true to include it, false to exclude it
+     * @return AggregateFile|null
      */
     public function globFile(string $glob, callable|null $filter = null): AggregateFile|null
     {
