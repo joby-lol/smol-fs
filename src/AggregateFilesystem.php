@@ -9,6 +9,8 @@
 
 namespace Joby\Smol\Filesystem;
 
+use Generator;
+
 /**
  * Helper for working with multiple filesystem root as if they were a single filesystem. Allows multiple Filesystem objects to be aggregated and queried.
  */
@@ -16,27 +18,61 @@ class AggregateFilesystem implements FilesystemInterface
 {
 
     /**
-     * Internal array of filesystems to query, in descending precedence order. Writes/creations will occur in the first one by default.
+     * Internal array of medium-priority filesystems to query, in descending precedence order. Writes/creations will occur in the first one in the highest priority by default.
      * @var array<FilesystemInterface>
      */
-    protected array $filesystems = [];
+    protected array $filesystems_high = [];
+
+    /**
+     * Internal array of medium-priority filesystems to query, in descending precedence order. Writes/creations will occur in the first one in the highest priority by default.
+     * @var array<FilesystemInterface>
+     */
+    protected array $filesystems_medium = [];
+
+    /**
+     * Internal array of low-priority filesystems to query, in descending precedence order. Writes/creations will occur in the first one in the highest priority by default.
+     * @var array<FilesystemInterface>
+     */
+    protected array $filesystems_low = [];
 
     public function __construct(
         FilesystemInterface ...$filesystems,
     )
     {
-        $this->filesystems = $filesystems;
+        $this->filesystems_medium = $filesystems;
     }
 
     /**
-     * Add a new sub-filesystem. By default they are added to the end of the list, making them the lowest priority. They can also be added to the front of the list by setting $new_main.
+     * Add a new medium-priority sub-filesystem. By default they are added to the end of the list, making them the lowest priority within this category. They can also be added to the front of the list by setting $add_to_front.
      */
-    public function addFilesystem(FilesystemInterface $filesystem, bool $new_main = false): void
+    public function addFilesystem(FilesystemInterface $filesystem, bool $add_to_front = false): void
     {
-        if ($new_main)
-            array_unshift($this->filesystems, $filesystem);
+        if ($add_to_front)
+            array_unshift($this->filesystems_medium, $filesystem);
         else
-            array_push($this->filesystems, $filesystem);
+            array_push($this->filesystems_medium, $filesystem);
+    }
+
+    /**
+     * Add a new high-priority sub-filesystem. By default they are added to the end of the list, making them the lowest priority within this category. They can also be added to the front of the list by setting $add_to_front.
+     */
+    public function addHighPriorityFilesystem(FilesystemInterface $filesystem, bool $add_to_front = false): void
+    {
+        if ($add_to_front)
+            array_unshift($this->filesystems_high, $filesystem);
+        else
+            array_push($this->filesystems_high, $filesystem);
+    }
+
+    /**
+     * Add a new low-priority sub-filesystem. By default they are added to the end of the list, making them the lowest priority within this category. They can also be added to the front of the list by setting $add_to_front.
+     */
+    public function addLowPriorityFilesystem(FilesystemInterface $filesystem, bool $add_to_front = false): void
+    {
+        if ($add_to_front)
+            array_unshift($this->filesystems_low, $filesystem);
+        else
+            array_push($this->filesystems_low, $filesystem);
     }
 
     /**
@@ -82,7 +118,7 @@ class AggregateFilesystem implements FilesystemInterface
     {
         /** @var array<string,DirectoryInterface[]> $directories */
         $directories = [];
-        foreach ($this->filesystems as $fs)
+        foreach ($this->filesystems() as $fs)
             foreach ($fs->directories($glob, $filter) as $dir)
                 $directories[$dir->relativePath()][] = $dir;
         return array_values(array_map(
@@ -102,10 +138,10 @@ class AggregateFilesystem implements FilesystemInterface
      */
     public function directory(string $path, bool $create = false): AggregateDirectory|null
     {
-        $directories = array_filter(array_map(
-            fn(FilesystemInterface $fs): DirectoryInterface|null => $fs->directory($path, $create),
-            $this->filesystems,
-        ));
+        $directories = [];
+        foreach ($this->filesystems() as $fs)
+            if ($file = $fs->directory($path, $create))
+                $directories[] = $file;
         if (!$directories)
             return null;
         return new AggregateDirectory($this, ...$directories);
@@ -120,10 +156,10 @@ class AggregateFilesystem implements FilesystemInterface
      */
     public function file(string $path, bool $create = false): AggregateFile|null
     {
-        $files = array_filter(array_map(
-            fn(FilesystemInterface $fs): FileInterface|null => $fs->file($path, $create),
-            $this->filesystems,
-        ));
+        $files = [];
+        foreach ($this->filesystems() as $fs)
+            if ($file = $fs->file($path, $create))
+                $files[] = $file;
         if (!$files)
             return null;
         return new AggregateFile($this, ...$files);
@@ -138,7 +174,7 @@ class AggregateFilesystem implements FilesystemInterface
     {
         /** @var array<string,FileInterface[]> $files */
         $files = [];
-        foreach ($this->filesystems as $fs)
+        foreach ($this->filesystems() as $fs)
             foreach ($fs->files($glob, $filter) as $dir)
                 $files[$dir->relativePath()][] = $dir;
         return array_values(array_map(
@@ -204,7 +240,7 @@ class AggregateFilesystem implements FilesystemInterface
      */
     public function contains(string $path): bool
     {
-        foreach ($this->filesystems as $filesystem)
+        foreach ($this->filesystems() as $filesystem)
             if ($filesystem->contains($path))
                 return true;
         return false;
@@ -215,10 +251,25 @@ class AggregateFilesystem implements FilesystemInterface
      */
     protected function parentFilesystem(string $path): FilesystemInterface|null
     {
-        foreach ($this->filesystems as $filesystem)
+        foreach ($this->filesystems() as $filesystem)
             if ($filesystem->contains($path))
                 return $filesystem;
         return null;
+    }
+
+    /**
+     * Merge all filesystems in priority order
+     * 
+     * @return Generator<int,FilesystemInterface>
+     */
+    protected function filesystems(): Generator
+    {
+        foreach ($this->filesystems_high as $fs)
+            yield $fs;
+        foreach ($this->filesystems_medium as $fs)
+            yield $fs;
+        foreach ($this->filesystems_low as $fs)
+            yield $fs;
     }
 
 }

@@ -48,7 +48,7 @@ class AggregateFilesystemTest extends TestCase
     }
 
     /**
-     * Test addFilesystem() priority ordering (appending vs unshifting).
+     * Test addFilesystem() priority ordering within the default (medium) priority tier.
      */
     public function test_add_filesystem_manages_priority_order(): void
     {
@@ -57,19 +57,140 @@ class AggregateFilesystemTest extends TestCase
 
         // Test default priority order (fs1 is primary)
         $aggregate = new AggregateFilesystem($this->fs1);
-        $aggregate->addFilesystem($this->fs2); // Appends to end (lowest priority)
+        $aggregate->addFilesystem($this->fs2); // Appends to end of medium tier
 
         $this->assertEquals('Primary Content', $aggregate->file('config.json')->read());
 
-        // Test unshifting new main filesystem ($new_main = true)
+        // Test adding to front of medium tier ($add_to_front = true)
         $fs3Path = sys_get_temp_dir() . '/smol_fs_agg_test_3_' . uniqid();
         mkdir($fs3Path, 0777, true);
         $fs3 = new Filesystem($fs3Path);
         $fs3->file('config.json', create: true)->write('Override Content');
 
-        $aggregate->addFilesystem($fs3, new_main: true);
+        $aggregate->addFilesystem($fs3, add_to_front: true);
 
         $this->assertEquals('Override Content', $aggregate->file('config.json')->read());
+
+        $this->removeDirectory($fs3Path);
+    }
+
+    /**
+     * Test that high priority filesystems override medium priority filesystems, 
+     * which in turn override low priority filesystems regardless of registration order.
+     */
+    public function test_priority_tier_precedence_ordering(): void
+    {
+        $fs3Path = sys_get_temp_dir() . '/smol_fs_agg_test_3_' . uniqid();
+        mkdir($fs3Path, 0777, true);
+        $fs3 = new Filesystem($fs3Path);
+
+        $this->fs1->file('config.json', create: true)->write('Medium Content');
+        $this->fs2->file('config.json', create: true)->write('Low Content');
+        $fs3->file('config.json', create: true)->write('High Content');
+
+        // Initialize with fs1 in constructor (Medium Priority)
+        $aggregate = new AggregateFilesystem($this->fs1);
+
+        // Add Low priority first, then High priority
+        $aggregate->addLowPriorityFilesystem($this->fs2);
+        $aggregate->addHighPriorityFilesystem($fs3);
+
+        // High priority (fs3) must take precedence
+        $this->assertEquals('High Content', $aggregate->file('config.json')->read());
+
+        // Delete high-priority file to verify fallback to Medium (fs1)
+        $fs3->file('config.json')->delete();
+        $this->assertEquals('Medium Content', $aggregate->file('config.json')->read());
+
+        // Delete medium-priority file to verify fallback to Low (fs2)
+        $this->fs1->file('config.json')->delete();
+        $this->assertEquals('Low Content', $aggregate->file('config.json')->read());
+
+        $this->removeDirectory($fs3Path);
+    }
+
+    /**
+     * Test that add_to_front within the same priority tier prepends to that specific tier.
+     */
+    public function test_add_to_front_within_same_priority_tier(): void
+    {
+        $fs3Path = sys_get_temp_dir() . '/smol_fs_agg_test_3_' . uniqid();
+        mkdir($fs3Path, 0777, true);
+        $fs3 = new Filesystem($fs3Path);
+
+        $this->fs1->file('app.txt', create: true)->write('High Base');
+        $this->fs2->file('app.txt', create: true)->write('High Appended');
+        $fs3->file('app.txt', create: true)->write('High Prepended');
+
+        $aggregate = new AggregateFilesystem();
+
+        // Add High Base
+        $aggregate->addHighPriorityFilesystem($this->fs1);
+
+        // Add High Appended (default add_to_front = false, goes after High Base)
+        $aggregate->addHighPriorityFilesystem($this->fs2, add_to_front: false);
+        $this->assertEquals('High Base', $aggregate->file('app.txt')->read());
+
+        // Add High Prepended (add_to_front = true, goes before High Base)
+        $aggregate->addHighPriorityFilesystem($fs3, add_to_front: true);
+        $this->assertEquals('High Prepended', $aggregate->file('app.txt')->read());
+
+        $this->removeDirectory($fs3Path);
+    }
+
+    /**
+     * Test adding to low priority with add_to_front = true prepends within the low-priority group,
+     * but remains below all medium and high priority filesystems.
+     */
+    public function test_low_priority_add_to_front_stays_below_medium_and_high_tiers(): void
+    {
+        $fs3Path = sys_get_temp_dir() . '/smol_fs_agg_test_3_' . uniqid();
+        mkdir($fs3Path, 0777, true);
+        $fs3 = new Filesystem($fs3Path);
+
+        $this->fs1->file('theme.css', create: true)->write('Medium Default');
+        $this->fs2->file('theme.css', create: true)->write('Low Base');
+        $fs3->file('theme.css', create: true)->write('Low Prepended');
+
+        // fs1 is Medium via constructor
+        $aggregate = new AggregateFilesystem($this->fs1);
+
+        $aggregate->addLowPriorityFilesystem($this->fs2);
+        // Prepend within Low tier
+        $aggregate->addLowPriorityFilesystem($fs3, add_to_front: true);
+
+        // Medium tier still wins over prepended Low tier
+        $this->assertEquals('Medium Default', $aggregate->file('theme.css')->read());
+
+        // Remove Medium file -> Low Prepended (fs3) wins over Low Base (fs2)
+        $this->fs1->file('theme.css')->delete();
+        $this->assertEquals('Low Prepended', $aggregate->file('theme.css')->read());
+
+        $this->removeDirectory($fs3Path);
+    }
+
+    /**
+     * Test primary creation target resolves to the highest priority available root.
+     */
+    public function test_writes_target_highest_priority_root_for_new_files(): void
+    {
+        $fs3Path = sys_get_temp_dir() . '/smol_fs_agg_test_3_' . uniqid();
+        mkdir($fs3Path, 0777, true);
+        $fs3 = new Filesystem($fs3Path);
+
+        $aggregate = new AggregateFilesystem();
+
+        $aggregate->addLowPriorityFilesystem($this->fs1);
+        $aggregate->addFilesystem($this->fs2); // Medium
+        $aggregate->addHighPriorityFilesystem($fs3); // High
+
+        // create: true targets highest-priority root ($fs3)
+        $newFile = $aggregate->file('created.txt', create: true);
+        $newFile->write('primary write');
+
+        $this->assertTrue($fs3->file('created.txt')->exists());
+        $this->assertNull($this->fs2->file('created.txt'));
+        $this->assertNull($this->fs1->file('created.txt'));
 
         $this->removeDirectory($fs3Path);
     }
