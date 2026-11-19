@@ -580,4 +580,32 @@ class DirectoryTest extends TestCase
         $this->assertEquals($this->testRoot . 'subdir', (string) $dir);
     }
 
+    public function test_contains_respects_directory_boundaries(): void
+    {
+        $dir = new Directory(
+            $this->testRoot . 'subdir',
+            $this->testRoot,
+        );
+
+        // A descendant is contained
+        $this->assertTrue(
+            $dir->contains($this->testRoot . 'subdir/file.txt'),
+        );
+
+        // A nested descendant is also contained
+        $this->assertTrue(
+            $dir->contains($this->testRoot . 'subdir/nested/file.txt'),
+        );
+
+        // A sibling with a matching prefix is NOT contained
+        $this->assertFalse(
+            $dir->contains($this->testRoot . 'subdir-backup/file.txt'),
+        );
+
+        // An unrelated sibling is not contained
+        $this->assertFalse(
+            $dir->contains($this->testRoot . 'other/file.txt'),
+        );
+    }
+
 }
