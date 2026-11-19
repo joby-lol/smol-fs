@@ -46,7 +46,7 @@ class Directory implements DirectoryInterface
             return $this;
         }
         // Non-recursive delete and return
-        if (!@rmdir($this->path))
+        if (is_dir($this->path) && !rmdir($this->path))
             throw new FilesystemException("Failed to delete directory: {$this->path}");
         return $this;
     }

@@ -63,8 +63,8 @@ class AggregateFile implements FileInterface
         $files = [];
         foreach ($this->files as $file)
             if ($file instanceof AggregateFile)
-                foreach ($file->rawFiles() as $raw_file)
-                    yield $raw_file;
+                foreach ($file->rawFiles() as $sub_file)
+                    yield $sub_file;
             else
                 yield $file;
     }
@@ -78,7 +78,11 @@ class AggregateFile implements FileInterface
     {
         foreach ($this->files as $file)
             if ($file->exists())
-                yield $file;
+                if ($file instanceof AggregateFile)
+                    foreach ($file->rawExistingFiles() as $sub_file)
+                        yield $sub_file;
+                else
+                    yield $file;
     }
 
     /**

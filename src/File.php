@@ -74,6 +74,8 @@ class File implements FileInterface
             throw new FilesystemException("Failed to acquire lock for file: {$this->path}");
         }
         // Open source handle and attempt to acquire a lock
+        if (!is_file($source))
+            throw new FilesystemException("Failed to open file for reading: $source");
         $source_handle = fopen($source, 'r+');
         if ($source_handle === false)
             throw new FilesystemException("Failed to open file for reading: $source");
