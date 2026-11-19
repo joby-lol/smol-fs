@@ -537,6 +537,10 @@ $templates = new AggregateFilesystem(
 $main = $templates->file('main.twig');
 ```
 
+## Threat model
+
+smolFS is explicitly **not** designed to protect against adversarial symlinks or other unusual filesystem tricks. It assumes a reasonably controlled and trustworthy directory tree. It is designed primarily to defend against user-supplied paths, not against a filesystem whose contents may themselves be adversarial.
+
 ## PHP version
 
 Fully cross-platform tested on PHP 8.3+, static analysis for PHP 8.1+.
