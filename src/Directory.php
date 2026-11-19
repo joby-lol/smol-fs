@@ -165,7 +165,9 @@ class Directory implements DirectoryInterface
     public function contains(string $path): bool
     {
         $path = PathNormalizer::normalize($path, null);
-        return str_starts_with($path, $this . DIRECTORY_SEPARATOR);
+        $base = PathNormalizer::normalize($this->path, null);
+        return $path === $base
+            || str_starts_with($path, rtrim($base, '/') . '/');
     }
 
     /**
