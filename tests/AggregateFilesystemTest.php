@@ -412,4 +412,47 @@ class AggregateFilesystemTest extends TestCase
         unlink($tempDest);
     }
 
+    public function test_copy_with_relative_paths(): void
+    {
+        // Source only exists in the lower-priority filesystem
+        $this->fs2->file('source.txt', create: true)
+            ->write('source content');
+
+        $aggregate = new AggregateFilesystem($this->fs1, $this->fs2);
+
+        $aggregate->copy('source.txt', 'copied.txt', true);
+
+        // Destination should be in the highest-priority filesystem
+        $this->assertSame(
+            'source content',
+            $this->fs1->file('copied.txt')->read(),
+        );
+
+        // Source remains intact
+        $this->assertSame(
+            'source content',
+            $this->fs2->file('source.txt')->read(),
+        );
+    }
+
+    public function test_move_with_relative_paths(): void
+    {
+        // Source only exists in the lower-priority filesystem
+        $this->fs2->file('source.txt', create: true)
+            ->write('source content');
+
+        $aggregate = new AggregateFilesystem($this->fs1, $this->fs2);
+
+        $aggregate->move('source.txt', 'moved.txt', true);
+
+        // Destination should be in the highest-priority filesystem
+        $this->assertSame(
+            'source content',
+            $this->fs1->file('moved.txt')->read(),
+        );
+
+        // Original should be gone
+        $this->assertNull($this->fs2->file('source.txt'));
+    }
+
 }

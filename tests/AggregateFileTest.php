@@ -206,4 +206,34 @@ class AggregateFileTest extends TestCase
         $this->assertSame($leaf3, $allRawFiles[2]);
     }
 
+    public function test_nested_aggregates_include_all_existing_files(): void
+    {
+        $file1 = $this->createMock(FileInterface::class);
+        $file2 = $this->createMock(FileInterface::class);
+        $file3 = $this->createMock(FileInterface::class);
+
+        $file1->method('exists')->willReturn(true);
+        $file2->method('exists')->willReturn(true);
+        $file3->method('exists')->willReturn(true);
+
+        $file1->method('read')->willReturn('first');
+        $file2->method('read')->willReturn('second');
+        $file3->method('read')->willReturn('third');
+
+        $inner = new AggregateFile($this->mockRoot, $file1, $file2);
+        $outer = new AggregateFile($this->mockRoot, $inner, $file3);
+
+        // All three raw files should be returned, not the inner aggregate
+        $this->assertSame(
+            [$file1, $file2, $file3],
+            iterator_to_array($outer->rawExistingFiles()),
+        );
+
+        // Concatenation should include every underlying file
+        $this->assertSame(
+            'first|second|third',
+            $outer->readConcatenated('|'),
+        );
+    }
+
 }
