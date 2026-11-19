@@ -246,7 +246,7 @@ class AggregateFilesystem implements FilesystemInterface
         $destination_fs = $this->parentFilesystem($destination)
             ?? $this->firstFilesystem()
             ?? throw new FilesystemException("Destination file must be inside AggregateFilesystem: {$destination}");
-        $destination_fs->moveIn($source, $destination, $allow_overwrite);
+        $destination_fs->moveIn($source, $destination, $allow_overwrite, $allow_uploaded_files);
     }
 
     /**
