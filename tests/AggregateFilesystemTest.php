@@ -455,4 +455,124 @@ class AggregateFilesystemTest extends TestCase
         $this->assertNull($this->fs2->file('source.txt'));
     }
 
+    public function test_move_in_with_relative_destination(): void
+    {
+        $source = sys_get_temp_dir() . '/smol_fs_move_in_' . uniqid();
+        file_put_contents($source, 'imported content');
+
+        try {
+            $aggregate = new AggregateFilesystem($this->fs1, $this->fs2);
+
+            // Relative destination should resolve against the first filesystem.
+            $aggregate->moveIn(
+                $source,
+                'subdir/imported.txt',
+                allow_overwrite: true,
+            );
+
+            $this->assertSame(
+                'imported content',
+                $this->fs1->file('subdir/imported.txt')->read(),
+            );
+            $this->assertNull($this->fs2->file('subdir/imported.txt'));
+            $this->assertFileDoesNotExist($source);
+        }
+        finally {
+            if (is_file($source))
+                unlink($source);
+        }
+    }
+
+    public function test_move_in_relative_destination_respects_priority(): void
+    {
+        $source = sys_get_temp_dir() . '/smol_fs_move_in_' . uniqid();
+        file_put_contents($source, 'priority content');
+
+        try {
+            // fs2 has higher priority despite being added later.
+            $aggregate = new AggregateFilesystem($this->fs1);
+            $aggregate->addHighPriorityFilesystem($this->fs2);
+
+            $aggregate->moveIn(
+                $source,
+                'imported.txt',
+                allow_overwrite: true,
+            );
+
+            $this->assertSame(
+                'priority content',
+                $this->fs2->file('imported.txt')->read(),
+            );
+            $this->assertNull($this->fs1->file('imported.txt'));
+            $this->assertFileDoesNotExist($source);
+        }
+        finally {
+            if (is_file($source))
+                unlink($source);
+        }
+    }
+
+    public function test_copy_in_with_relative_destination(): void
+    {
+        $source = sys_get_temp_dir() . '/smol_fs_copy_in_' . uniqid();
+        file_put_contents($source, 'imported content');
+
+        try {
+            $aggregate = new AggregateFilesystem($this->fs1, $this->fs2);
+
+            // Relative destination should resolve against the first filesystem.
+            $aggregate->copyIn(
+                $source,
+                'subdir/imported.txt',
+                allow_overwrite: true,
+            );
+
+            $this->assertSame(
+                'imported content',
+                $this->fs1->file('subdir/imported.txt')->read(),
+            );
+            $this->assertNull($this->fs2->file('subdir/imported.txt'));
+
+            // Copying must preserve the source.
+            $this->assertFileExists($source);
+            $this->assertSame('imported content', file_get_contents($source));
+        }
+        finally {
+            if (is_file($source))
+                unlink($source);
+        }
+    }
+
+    public function test_copy_in_relative_destination_respects_priority(): void
+    {
+        $source = sys_get_temp_dir() . '/smol_fs_copy_in_' . uniqid();
+        file_put_contents($source, 'priority content');
+
+        try {
+            // fs2 has higher priority despite being added later.
+            $aggregate = new AggregateFilesystem($this->fs1);
+            $aggregate->addHighPriorityFilesystem($this->fs2);
+
+            $aggregate->copyIn(
+                $source,
+                'imported.txt',
+                allow_overwrite: true,
+            );
+
+            $this->assertSame(
+                'priority content',
+                $this->fs2->file('imported.txt')->read(),
+            );
+            $this->assertNull($this->fs1->file('imported.txt'));
+
+            // Source must remain unchanged.
+            $this->assertFileExists($source);
+            $this->assertSame('priority content', file_get_contents($source));
+        }
+        finally {
+            if (is_file($source))
+                unlink($source);
+        }
+    }
+
 }

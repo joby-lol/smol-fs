@@ -98,6 +98,8 @@ class AggregateFilesystem implements FilesystemInterface
      */
     public function copyIn(string $source, string|FileInterface $destination, bool $allow_overwrite): void
     {
+        if (is_string($destination))
+            $destination = $this->file($destination, true);
         $destination_fs = $this->parentFilesystem($destination)
             ?? $this->firstFilesystem()
             ?? throw new FilesystemException("Destination file must be inside AggregateFilesystem: {$destination}");
@@ -239,9 +241,12 @@ class AggregateFilesystem implements FilesystemInterface
      */
     public function moveIn(string $source, string|FileInterface $destination, bool $allow_overwrite, bool $allow_uploaded_files = false): void
     {
-        if (!($destination_fs = $this->parentFilesystem($destination)))
-            throw new FilesystemException("Destination file must be inside AggregateFilesystem: {$destination}");
-        $destination_fs->moveIn($source, $destination, $allow_overwrite, $allow_uploaded_files);
+        if (is_string($destination))
+            $destination = $this->file($destination, true);
+        $destination_fs = $this->parentFilesystem($destination)
+            ?? $this->firstFilesystem()
+            ?? throw new FilesystemException("Destination file must be inside AggregateFilesystem: {$destination}");
+        $destination_fs->moveIn($source, $destination, $allow_overwrite);
     }
 
     /**
